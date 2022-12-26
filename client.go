@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -81,6 +82,14 @@ func (p *Provider) setRecord(ctx context.Context, zone string, record libdns.Rec
 }
 
 func (p *Provider) doRequest(ctx context.Context, domain string, params map[string]string) ([]string, error) {
+	out, err := p.doRequestInternal(ctx, domain, params)
+	if err != nil {
+		log.Printf("duckdns failed: %s", err.Error())
+	}
+	return out, err
+}
+
+func (p *Provider) doRequestInternal(ctx context.Context, domain string, params map[string]string) ([]string, error) {
 	u, _ := url.Parse("https://www.duckdns.org/update")
 
 	// extract the main domain
@@ -108,8 +117,11 @@ func (p *Provider) doRequest(ctx context.Context, domain string, params map[stri
 	// set the query back on the URL
 	u.RawQuery = query.Encode()
 
+	var fullUrl = u.String()
+	log.Printf("duckdns: call http request at url %s", fullUrl)
+
 	// make the request
-	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", fullUrl, nil)
 	if err != nil {
 		return nil, err
 	}
